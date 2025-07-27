@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuis Interaktif Otomatis</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2c3e50;
+            --correct-color: #2ecc71;
+            --incorrect-color: #e74c3c;
+            --bg-color: #ecf0f1;
+            --light-color: #ffffff;
+            --neutral-color: #bdc3c7;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--secondary-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: var(--light-color);
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 800px;
+            padding: 30px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        h1,
+        h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: var(--primary-color);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Menu Screen */
+        #session-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .session-btn {
+            background-color: var(--primary-color);
+            color: var(--light-color);
+            border: none;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .session-btn:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        /* Quiz Screen */
+        #quiz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        #session-title {
+            margin: 0;
+        }
+
+        #progress-text {
+            font-weight: 600;
+            background-color: #eaf5ff;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: var(--primary-color);
+        }
+
+        #question-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            line-height: 1.6;
+            min-height: 100px;
+            /* Memberi ruang agar layout tidak "loncat" */
+        }
+
+        #answer-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .option-btn {
+            background-color: var(--light-color);
+            border: 2px solid var(--neutral-color);
+            color: var(--secondary-color);
+            width: 100%;
+            text-align: left;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .option-btn:hover:not([disabled]) {
+            border-color: var(--primary-color);
+            background-color: #f8f9fa;
+        }
+
+        /* Kelas 'answered' mencegah hover effect setelah jawaban dipilih */
+        .option-btn.answered:hover {
+            cursor: not-allowed;
+        }
+
+        .option-btn.correct {
+            background-color: var(--correct-color);
+            border-color: var(--correct-color);
+            color: var(--light-color);
+        }
+
+        .option-btn.incorrect {
+            background-color: var(--incorrect-color);
+            border-color: var(--incorrect-color);
+            color: var(--light-color);
+        }
+
+        /* Result Screen */
+        #restart-button {
+            background-color: var(--secondary-color);
+            color: var(--light-color);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #restart-button:hover {
+            background-color: #3e4c5a;
+        }
+
+        #result-screen {
+            text-align: center;
+        }
+
+        #score-text {
+            font-size: 4rem;
+            margin: 20px 0;
+        }
+
+        #score-details {
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+        }
+
+        #summary-container {
+            max-height: 300px;
+            overflow-y: auto;
+            text-align: left;
+            border-top: 1px solid var(--neutral-color);
+            margin-top: 20px;
+            padding-top: 20px;
+        }
+
+        .summary-item {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .summary-item.correct {
+            background-color: #eafaf1;
+            border-left: 5px solid var(--correct-color);
+        }
+
+        .summary-item.incorrect {
+            background-color: #fbeeee;
+            border-left: 5px solid var(--incorrect-color);
+        }
+
+        .summary-item p {
+            margin: 5px 0;
+        }
+
+        .summary-item .user-answer {
+            color: var(--incorrect-color);
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div id="menu-screen">
+            <h1>Pilih Sesi Kuis</h1>
+            <div id="session-buttons">
+            </div>
+        </div>
+
+        <div id="quiz-screen" class="hidden">
+            <div id="quiz-header">
+                <h2 id="session-title"></h2>
+                <p id="progress-text"></p>
+            </div>
+            <div id="question-container">
+                <p id="question-text"></p>
+                <div id="answer-options"></div>
+            </div>
+        </div>
+
+        <div id="result-screen" class="hidden">
+            <h2>Hasil Kuis</h2>
+            <p>Sesi: <span id="result-session-title"></span></p>
+            <p>Skor Anda:</p>
+            <h1 id="score-text"></h1>
+            <p id="score-details"></p>
+            <div id="summary-container"></div>
+            <button id="restart-button">Pilih Sesi Lain</button>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const quizData = {
+                'Keamanan Siber': [
+                    { question: "Teknologi keamanan siber apa yang digunakan untuk mendeteksi dan mencegah serangan DDoS?", options: ["Firewall", "Intrusion Detection System (IDS)", "Intrusion Prevention System (IPS)", "Load Balancer"], answer: "C" },
+                    { question: "Apa yang dimaksud dengan Two-Factor Authentication (2FA) dalam konteks keamanan siber?", options: ["Metode autentikasi yang menggunakan dua faktor", "Metode enkripsi yang menggunakan dua kunci", "Metode autentikasi yang menggunakan satu faktor", "Metode firewall yang menggunakan dua aturan"], answer: "A" },
+                    { question: "Apa yang dimaksud dengan Encryption dalam konteks keamanan siber?", options: ["Proses mengubah kode rahasia menjadi data", "Proses mengubah data menjadi kode rahasia", "Proses mendeteksi intrusi", "Proses mencegah intrusi"], answer: "B" },
+                    { question: "Teknologi keamanan siber apa yang digunakan untuk memverifikasi identitas pengguna?", options: ["Otorisasi", "Enkripsi", "Firewall", "Autentikasi"], answer: "D" },
+                    { question: "Apa yang dimaksud dengan CCTV dalam konteks keamanan fisik?", options: ["Sistem pengawasan video", "Sistem autentikasi pengguna", "Sistem deteksi intrusi jaringan", "Sistem enkripsi data"], answer: "A" },
+                    { question: "Apa yang dimaksud dengan RFID dalam konteks keamanan fisik?", options: ["Teknologi pengawasan video", "Teknologi enkripsi data", "Teknologi deteksi intrusi", "Teknologi identifikasi menggunakan gelombang radio"], answer: "D" },
+                    { question: "Teknologi keamanan fisik apa yang digunakan untuk mendeteksi pergerakan orang atau objek di area tertentu?", options: ["CCTV", "Motion Detector", "Intrusion Detection System (IDS)", "Access Control System (ACS)"], answer: "B" },
+                    { question: "Teknologi keamanan fisik apa yang digunakan untuk mendeteksi kebakaran di area tertentu?", options: ["Fire Alarm System", "Access Control System (ACS)", "CCTV", "Motion Detector"], answer: "A" },
+                    { question: "Apa yang dimaksud dengan Perimeter Security dalam konteks keamanan fisik?", options: ["Sistem deteksi intrusi jaringan", "Sistem keamanan yang melindungi area luar kompleks bangunan", "Sistem pengawasan video", "Sistem keamanan yang melindungi area sekitar bangunan"], answer: "D" },
+                    { question: "Teknologi keamanan fisik apa yang digunakan untuk mengamankan pintu atau akses ke area tertentu?", options: ["Locks", "CCTV", "Access Control System (ACS)", "Motion Detector"], answer: "C" }
+                ],
+                'Robotik': [
+                    { question: "Revolusi Industri 1.0 ditandai dengan penggunaan…", options: ["Energi listrik untuk produksi massal", "Komputer dan internet", "Mesin uap dan tenaga air", "Robot cerdas berbasis AI", "Energi nuklir"], answer: "C" },
+                    { question: "Siapakah tokoh utama pada Revolusi Industri 2.0?", options: ["James Watt", "Alan Turing", "Nikola Tesla dan Thomas Edison", "Charles Babbage", "Albert Einstein"], answer: "C" },
+                    { question: "Komponen utama dalam robot mobile meliputi, kecuali...", options: ["Sensor", "Chassis", "Mikrokontroler", "Power bank", "Aktuator"], answer: "D" },
+                    { question: "Microcontroller ATmega328p memiliki jumlah Flash Memory sebesar...", options: ["16k", "2k", "32k", "64k", "1k"], answer: "C" },
+                    { question: "Teknologi Digital Twin digunakan untuk...", options: ["Interaksi suara dengan robot", "Prediksi kebutuhan logistik", "Prediktif maintenance pada robot pertanian", "Menyalin data dari cloud ke device", "Melakukan diagnosis medis"], answer: "C" },
+                    { question: "Komponen berikut berfungsi untuk mengontrol arah rotasi motor DC:", options: ["EEPROM", "H-Bridge", "Flash Memory", "UART", "Buzzer"], answer: "B" },
+                    { question: "Apa itu sistem “closed loop” dalam kendali robot?", options: ["Sistem terbuka tanpa feedback", "Sistem yang memberikan umpan balik", "Sistem analog penuh", "Sistem tanpa sensor", "Sistem satu arah"], answer: "B" },
+                    { question: "Perangkat lunak ROS digunakan dalam robotika untuk...", options: ["Memutar musik", "Membaca file PDF", "Integrasi dan komunikasi antar komponen robot", "Komunikasi internet", "Streaming video"], answer: "C" },
+                    { question: "Sensor HC-SR04 bekerja berdasarkan...", options: ["Inframerah", "Ultrasonik", "Sensor cahaya", "Sensor tekanan", "Sensor suhu"], answer: "B" },
+                    { question: "Industri robotik pertanian mencatat CAGR sebesar...", options: ["5%", "8%", "10%", "12%", "15%"], answer: "D" }
+                ],
+                'Pemrograman': [
+                    { question: "Siapa yang memberikan pengantar mengenai pengembangan website dalam presentasi ini", options: ["Tim Berners-Lee", "Nabil, S.Kom", "Bill Gates", "Mark Zuckerberg", "Steve Jobs"], answer: "B" },
+                    { question: "Apa fungsi utama dari HTML dalam pengembangan website", options: ["Menambah interaktivitas website", "Mengatur tampilan dan tata letak website", "Mengelola basis data", "Menyusun struktur konten", "Mengoptimalkan SEO"], answer: "D" },
+                    { question: "Apa yang dimaksud dengan CSS", options: ["Bahasa pemrograman untuk backend", "Alat untuk mengelola konten", "Bahasa yang digunakan untuk mendesain dan mengatur tata letak halaman web", "Framework untuk pengembangan aplikasi", "Sistem manajemen basis data"], answer: "C" },
+                    { question: "Apa yang menjadi tujuan utama dari penggunaan media queries dalam CSS", options: ["Mengoptimalkan kecepatan muat halaman", "Mengatur tampilan elemen berdasarkan ukuran layar perangkat", "Menyimpan data pengguna", "Mengelola komunikasi antara frontend dan backend", "Mengontrol alur logika aplikasi"], answer: "B" },
+                    { question: "Apa yang dimaksud dengan prinsip \"Mobile First\" dalam desain web", options: ["Mendesign situs untuk desktop terlebih dahulu", "Merancang desain situs dengan fokus utama pada perangkat mobile", "Mengabaikan perangkat mobile saat merancang", "Memberikan fitur mobile secara terpisah", "Fokus pada pengujian situs di desktop"], answer: "B" },
+                    { question: "Salah satu solusi untuk meningkatkan kecepatan muat halaman adalah dengan", options: ["Menambahkan lebih banyak gambar", "Mengurangi ukuran file gambar melalui kompresi", "Menghindari penggunaan CSS", "Menggunakan HTML tanpa tag", "Mengurangi penggunaan JavaScript"], answer: "B" },
+                    { question: "Apa yang dimaksud dengan SQL Injection dalam konteks keamanan web", options: ["Metode untuk mengeksekusi skrip di frontend", "Serangan yang mengeksploitasi kerentanan dalam interaksi basis data", "Teknik untuk mengoptimalkan query SQL", "Penggunaan API untuk mengakses data", "Penyimpanan data di cloud"], answer: "B" },
+                    { question: "Upaya apa yang harus dilakukan untuk menangkal serangan keamanan pada aplikasi web", options: ["Menggunakan HTTPS dan validasi input", "Mengabaikan firewall", "Tidak melakukan pengujian", "Membatasi akses pengguna", "Meningkatkan waktu muat halaman"], answer: "A" },
+                    { question: "Dalam riset kata kunci, apa yang harus ditentukan terlebih dahulu", options: ["Target kompetitor", "Tujuan dari riset kata kunci", "Jumlah kata kunci yang digunakan", "Jenis teknologi web yang digunakan", "Platform pengembangan yang akan dipilih"], answer: "B" },
+                    { question: "Mengapa penting untuk memiliki dokumentasi yang jelas dalam pengembangan website", options: ["Agar proyek dapat terlaksana tanpa rencana", "Untuk menggantikan pengembangan kode", "Agar memudahkan semua anggota tim dalam memahami dan memelihara proyek", "Untuk memperlambat proses pengembangan", "Karena semua proyek harus memiliki dokumen panjang"], answer: "C" }
+                ],
+                'IT Infra': [
+                    { question: "Apa keuntungan utama dari digitalisasi sistem pembayaran", options: ["Meningkatkan penggunaan uang tunai", "Menurunkan biaya produksi uang fisik", "Efisiensi, kecepatan, dan transparansi", "Mengurangi penggunaan teknologi", "Menambah kompleksitas transaksi"], answer: "C" },
+                    { question: "Apa bentuk evolusi sistem pembayaran dari masa lalu hingga sekarang", options: ["QR Code → ATM → Internet Banking → Mobile Apps", "Internet Banking → Tunai → ATM", "ATM → Internet Banking → Mobile Apps → Open Banking", "Open Banking → E-wallet → Tunai", "Mobile Apps → QR Code → ATM"], answer: "C" },
+                    { question: "Tren sistem pembayaran saat ini mengarah ke penggunaan", options: ["Uang fisik dan cek", "E-wallet dan QR Code", "Giro dan wesel", "Kartu kredit saja", "Transfer manual"], answer: "B" },
+                    { question: "Apa fungsi utama API dalam sistem pembayaran digital", options: ["Menghapus transaksi", "Menghubungkan perangkat keras", "Mengintegrasikan layanan fintech dan bank", "Menyimpan uang digital", "Menyediakan layanan offline"], answer: "C" },
+                    { question: "Jenis QRIS yang memungkinkan pengguna menarik tunai disebut", options: ["QR Static", "QR CPM", "QR Tap", "QR Tuntas", "QR MPM"], answer: "D" },
+                    { question: "Apa perbedaan utama antara QR MPM dan QR CPM", options: ["CPM hanya untuk transaksi internasional", "MPM disediakan oleh pelanggan", "MPM ditampilkan oleh merchant, CPM oleh pelanggan", "CPM digunakan untuk penarikan tunai", "MPM bersifat dinamis, CPM statis"], answer: "C" },
+                    { question: "Teknologi 5G berkontribusi pada sistem pembayaran dengan:", options: ["Meningkatkan jumlah transaksi tunai", "Mengurangi transparansi data", "Memberikan latensi rendah dan kecepatan tinggi", "Menghapus kebutuhan IoT", "Membatasi penggunaan API"], answer: "C" },
+                    { question: "Fungsi AI dalam sistem pembayaran digital termasuk", options: ["Mencetak uang digital", "Deteksi fraud dan personalisasi risiko", "Meningkatkan penggunaan QR statis", "Membuat jaringan 5G", "Menyimpan data secara manual"], answer: "B" },
+                    { question: "Teknologi blockchain dalam sistem pembayaran bersifat", options: ["Terpusat dan cepat dimodifikasi", "Transparan dan mudah diubah", "Terdesentralisasi dan tidak dapat dimodifikasi", "Tertutup dan statis", "Digunakan hanya untuk QRIS"], answer: "C" },
+                    { question: "Salah satu tantangan utama dalam infrastruktur IT sistem pembayaran adalah", options: ["Kurangnya pengguna uang tunai", "Keterbatasan koneksi internet", "Integrasi layanan yang berbeda-beda", "Penggunaan satu jenis perangkat", "Pengurangan penggunaan AI"], answer: "C" }
+                ],
+                'Rekayasa Komputer': [
+                    { question: "Apa definisi dari Computer Engineering?", options: ["Cabang ilmu sosial yang menggabungkan psikologi dan robotika", "Cabang teknik elektro dan ilmu komputer yang mengembangkan perangkat keras dan lunak komputer", "Studi tentang perangkat lunak berbasis cloud", "Ilmu yang hanya mempelajari sistem operasi", "Ilmu murni yang fokus pada teori komputasi"], answer: "B" },
+                    { question: "Salah satu fokus utama dari rekayasa komputer adalah...", options: ["Produksi listrik", "Pembuatan aplikasi mobile", "Integrasi perangkat keras dan lunak", "Manajemen basis data", "Pengolahan sinyal analog"], answer: "C" },
+                    { question: "Istilah embedded system mengacu pada...", options: ["Sistem operasi mobile", "Perangkat komputer berdaya besar", "Komputer yang tertanam di dalam suatu produk", "Komputer khusus untuk server", "Sistem virtual berbasis awan"], answer: "C" },
+                    { question: "Tantangan terbesar dalam desain sistem tertanam adalah...", options: ["Kecepatan clock", "Kebutuhan bandwidth tinggi", "Sensitivitas biaya, ukuran, dan daya", "Kompatibilitas dengan cloud", "Penggunaan VR headset"], answer: "C" },
+                    { question: "“Design thinking” dalam konteks rekayasa berarti...", options: ["Fokus pada pembuatan perangkat keras", "Proses berpikir intuitif untuk desain antarmuka", "Pendekatan sistematis untuk memecahkan masalah dengan pendekatan desain", "Skema teknis untuk kabel mikro", "Cara kerja mesin 3D"], answer: "C" },
+                    { question: "Salah satu tantangan desain sistem tertanam adalah memastikan sistem bekerja secara...", options: ["Simultan", "Virtual", "Tidak sinkron", "Tepat dan tidak salah (safety-critical)", "Tidak terhubung jaringan"], answer: "D" },
+                    { question: "Contoh aplikasi embedded system yang membutuhkan IP67/IP68 adalah...", options: ["Sistem kasir swalayan", "Panel kontrol elevator", "Sensor lingkungan luar ruangan", "Software CRM", "Monitor ruangan indoor"], answer: "C" },
+                    { question: "Interkoneksi IoT dalam sistem tertanam berfungsi untuk...", options: ["Mematikan sensor", "Menyinkronkan waktu internal", "Menghubungkan sensor, kontrol, dan analytics", "Mengaktifkan Wi-Fi publik", "Menghapus data lama"], answer: "C" },
+                    { question: "Komputasi awan dalam embedded system berperan dalam...", options: ["Menyimpan data offline", "Memberi tegangan ke sensor", "Analisis data terpusat dan skalabilitas", "Meningkatkan ukuran perangkat", "Menghilangkan kebutuhan OS"], answer: "C" },
+                    { question: "Istilah cyber-physical system mengacu pada...", options: ["Sistem fisik yang tidak terkoneksi", "Kombinasi antara dunia fisik dan dunia digital", "Proses produksi manual", "Sistem operasi komputer", "Jaringan komputer pribadi"], answer: "B" }
+                ],
+                'Cisco': [
+                    { question: "Berapa jumlah perangkat IoT yang diperkirakan akan terpasang pada tahun 2025?", options: ["10 miliar", "25 miliar", "30 miliar", "46 miliar", "67 miliar"], answer: "C" },
+                    { question: "Apa yang menjadi salah satu keunggulan Cisco dalam bidang keamanan siber?", options: ["Memiliki pusat data di seluruh dunia", "Menyediakan firewall gratis", "Memproses 400 miliar event keamanan per hari", "Mempunyai pusat layanan pelanggan 24 jam", "Menyediakan browser aman"], answer: "C" },
+                    { question: "Apa tujuan utama Cisco sebagai perusahaan teknologi?", options: ["Menjadi pemimpin dalam penjualan perangkat keras", "Membuat jejaring sosial baru", "Menciptakan masa depan yang inklusif untuk semua", "Menjadi perusahaan cloud terbesar di dunia", "Mengembangkan sistem operasi sendiri"], answer: "C" },
+                    { question: "Produk Cisco Umbrella berfungsi untuk…", options: ["Meningkatkan kecepatan jaringan", "Mengelola perangkat nirkabel", "Menyediakan keamanan berbasis cloud", "Mengganti perangkat lunak antivirus", "Mempercepat koneksi ke server DNS"], answer: "C" },
+                    { question: "Produk Cisco AnyConnect digunakan untuk…", options: ["Kolaborasi tim secara real-time", "Menyediakan akses jarak jauh yang aman", "Mengelola database perusahaan", "Melakukan observasi AI", "Mengamankan data dalam server internal"], answer: "B" },
+                    { question: "Apa nama platform observability dari Cisco?", options: ["Cisco SmartWatch", "Cisco NetScope", "Cisco Full-Stack Observability", "Cisco Insight Center", "Cisco ViewPoint"], answer: "C" },
+                    { question: "Apa nama teknologi Cisco untuk infrastruktur jaringan AI?", options: ["Cisco DeepLink", "Cisco SmartCore", "Cisco Silicon One", "Cisco AI Core", "Cisco NetFusion"], answer: "C" },
+                    { question: "Cisco berkolaborasi dengan perusahaan apa dalam pengembangan infrastruktur AI?", options: ["Microsoft", "Meta", "Amazon", "NVIDIA", "Oracle"], answer: "D" },
+                    { question: "Apa nama server rack Cisco yang digunakan dalam data center AI?", options: ["UCS X450 M6", "UCS B240 M4", "UCS C845A M8", "UCS D610 M8", "UCS S325 M5"], answer: "C" },
+                    { question: "Apa pendekatan Cisco untuk keamanan data center AI?", options: ["Isolasi virtual terbatas", "Cloud-only security", "Keamanan dari perangkat lunak", "Keamanan dari bawah ke cloud (ground to cloud)", "Pengawasan berbasis AI saja"], answer: "D" }
+                ],
+                'Data Analytics': [
+                    { question: "What is the primary difference between a Data Lake and a Data Mart?", options: ["Data Marts store only structured data, while Data Lakes store only video data", "Data Lakes are for real-time analytics, while Data Marts are for storage", "Data Lakes store raw, unstructured data, while Data Marts store structured, business-focused data", "Data Marts are cheaper than Data Lakes"], answer: "C" },
+                    { question: "In the DIKW Pyramid, what does 'Wisdom' represent?", options: ["Cleaned and structured data", "A set of facts without context", "Knowledge applied in action", "A report of all metrics"], answer: "C" },
+                    { question: "Which of the following tools is not listed as part of the Data Visualization stack?", options: ["Superset", "Tableau", "Redash", "TensorFlow"], answer: "D" },
+                    { question: "What are the three key variables in RFM Analysis?", options: ["Revenue, Frequency, Memory", "Recency, Frequency, Monetary", "Reach, Frequency, Model", "Return, Frequency, Measurement"], answer: "B" },
+                    { question: "What does a Collaborative Filtering recommendation system primarily depend on?", options: ["Product features", "User demographics", "User behavior and preferences of similar users", "Product descriptions and tags"], answer: "C" },
+                    { question: "In the analytics team journey, what phase involves creating a KPI metrics dashboard before product launch?", options: ["Discover", "Define", "Deliver", "Maintain"], answer: "C" },
+                    { question: "Which role is mainly responsible for converting product OKRs into measurable performance metrics?", options: ["AI Engineer", "Data Engineer", "Data Analyst", "UX Designer"], answer: "C" },
+                    { question: "What is the main advantage of Content-Based Recommendation Engines?", options: ["They rely heavily on user collaboration", "They provide recommendations for new and unpopular items", "They require large amounts of historical user ratings", "They do not work with unique user preferences"], answer: "B" },
+                    { question: "Which of the following is not a listed type of data analytics?", options: ["Descriptive Analytics", "Predictive Analytics", "Prescriptive Analytics", "Narrative Analytics"], answer: "D" },
+                    { question: "What is the first step in implementing a data tracking system?", options: ["Data transformation", "Requirement gathering and detailing", "Visualization using BI tools", "A/B testing"], answer: "B" }
+                ],
+                'Machine Learning': [
+                    { question: "Apa tujuan utama dari penggunaan machine learning dalam perencanaan kapasitas jaringan?", options: ["Menambah jumlah perangkat jaringan", "Mengurangi bandwidth", "Meningkatkan efisiensi dalam perencanaan kapasitas jaringan", "Menghapus data duplikat", "Menurunkan harga layanan internet"], answer: "C" },
+                    { question: "Metode ARIMA memiliki kelemahan utama yaitu...", options: ["Terlalu kompleks dalam implementasi", "Tidak dapat mengikuti lonjakan atau penurunan mendadak", "Hanya bisa digunakan untuk data kategorik", "Tidak bisa digunakan untuk prediksi jangka panjang", "Terlalu lambat dalam memproses data"], answer: "B" },
+                    { question: "Model mana yang menghasilkan nilai Mean Absolute Error (MAE) paling rendah dalam studi ini?", options: ["ARIMA", "LSTM", "RNN", "RNN-GA", "Traditional"], answer: "D" },
+                    { question: "Mengapa LSTM dianggap lebih baik daripada metode tradisional?", options: ["Tidak membutuhkan data historis", "Dapat memproses gambar dan teks", "Mampu menangkap pola naik-turun yang tidak stabil", "Lebih cocok untuk data kategorik", "Mampu menghapus outlier"], answer: "C" },
+                    { question: "Faktor apa yang paling mempengaruhi kenaikan error saat melakukan prediksi jangka panjang dengan ARIMA?", options: ["Kualitas data", "Ukuran window prediksi yang semakin besar", "Jumlah variabel bebas", "Pemilihan parameter", "Kecepatan server"], answer: "B" },
+                    { question: "Apa tantangan utama dari metode perencanaan kapasitas jaringan tradisional?", options: ["Kurangnya data pelanggan", "Tidak tersedianya perangkat keras", "Proses manual dan tidak adanya identifikasi dini", "Biaya terlalu rendah", "Kebutuhan kapasitas yang stagnan"], answer: "C" },
+                    { question: "Apa yang dimaksud dengan metode ensemble?", options: ["Penggunaan satu model tunggal", "Menggabungkan beberapa model untuk hasil prediksi", "Model tanpa training", "Model klasifikasi citra", "Model berbasis statistik"], answer: "B" },
+                    { question: "Model yang paling efisien berdasarkan MAE terendah adalah…", options: ["ARIMA", "LSTM", "RNN", "RNN-GA", "Ensemble"], answer: "D" },
+                    { question: "Framework flow dimulai dari...", options: ["Visualization", "Cleansing", "Strategic Situation Analysis", "Data Deployment", "API Integration"], answer: "C" },
+                    { question: "Apa alat yang digunakan untuk integrasi prediksi dengan tools perencanaan?", options: ["SQL Server", "REST API", "HTML", "FTP", "VPN"], answer: "B" }
+                ],
+                'IOT, AI, Telekomunikasi': [
+                    { question: "Apa pengertian dari “Telekomunikasi” secara etimologis?", options: ["Komunikasi berbasis suara digital", "Pengiriman sinyal menggunakan kabel optik", "Komunikasi jarak jauh", "Sistem transmisi data dengan satelit", "Komunikasi antar manusia dalam satu ruangan"], answer: "C" },
+                    { question: "Manakah yang merupakan contoh komunikasi asynchronous?", options: ["Telepon", "Walkie talkie", "Chat via email", "Video call", "Percakapan langsung"], answer: "C" },
+                    { question: "Siapa yang mematenkan penemuan telepon pertama kali pada tahun 1876?", options: ["Nicola Tesla", "Claude Chappe", "Almon Strowger", "Alexander Graham Bell", "Samuel Morse"], answer: "D" },
+                    { question: "Apa fungsi utama dari teknologi AI dalam supply chain retail?", options: ["Menyediakan suara robotik untuk pelanggan", "Mengubah produk fisik menjadi digital", "Memperkirakan konsumsi berdasarkan data perilaku dan cuaca", "Meningkatkan bandwidth jaringan", "Menggantikan semua pegawai toko"], answer: "C" },
+                    { question: "Dalam IoT, yang termasuk dalam komponen utama adalah...", options: ["Database, Proyektor, dan Cloud", "Sensor, Aktuator, dan Internet", "Mikrokontroler, Printer, dan Excel", "Kamera, Baterai, dan Mouse", "CD, DVD, dan Storage eksternal"], answer: "B" },
+                    { question: "Apa keuntungan penggunaan AI dalam dunia medis saat ini dibandingkan pendekatan tradisional?", options: ["Menghilangkan kebutuhan dokter", "Memungkinkan diagnosis lebih cepat dan akurat", "Menghindari penggunaan alat medis", "Membatasi pasien dalam memilih pengobatan", "Membuat semua data menjadi rahasia"], answer: "B" },
+                    { question: "Apa perbedaan utama antara Machine Learning dan Deep Learning?", options: ["ML tidak membutuhkan data, DL membutuhkan", "DL adalah bagian dari ML yang menggunakan jaringan saraf untuk belajar dari data besar", "ML digunakan untuk game, DL untuk keuangan", "ML berbasis suara, DL berbasis teks", "Tidak ada perbedaan, keduanya sama"], answer: "B" },
+                    { question: "Apa model komunikasi yang diperkenalkan oleh Shannon dan Weaver?", options: ["Circular Loop Model", "Noise Filter Model", "Linear Feedback Model", "Shannon-Weaver Model", "Telepathic Communication Model"], answer: "D" },
+                    { question: "Dalam arsitektur IoT, proses “Monitoring” bertujuan untuk...", options: ["Menyimpan data di cloud", "Melakukan tindakan otomatis", "Memberi respons suara", "Mengamati dan mengumpulkan data secara real-time", "Menghapus data dari sistem"], answer: "D" },
+                    { question: "AIoT adalah gabungan dari...", options: ["IoT dan Augmented Reality", "AI dan Telecommunication", "AI dan Big Data", "AI dan IoT", "AI dan Elektronik Konsumen"], answer: "D" }
+                ]
+            };
+
+            const menuScreen = document.getElementById('menu-screen');
+            const quizScreen = document.getElementById('quiz-screen');
+            const resultScreen = document.getElementById('result-screen');
+
+            const sessionButtonsContainer = document.getElementById('session-buttons');
+            const sessionTitle = document.getElementById('session-title');
+            const questionText = document.getElementById('question-text');
+            const answerOptionsContainer = document.getElementById('answer-options');
+            const progressText = document.getElementById('progress-text');
+
+            const resultSessionTitle = document.getElementById('result-session-title');
+            const scoreText = document.getElementById('score-text');
+            const scoreDetails = document.getElementById('score-details');
+            const summaryContainer = document.getElementById('summary-container');
+            const restartButton = document.getElementById('restart-button');
+
+            let currentSession = '';
+            let currentQuestions = [];
+            let currentQuestionIndex = 0;
+            let score = 0;
+            let userAnswers = [];
+
+            function initMenu() {
+                sessionButtonsContainer.innerHTML = '';
+                Object.keys(quizData).forEach(sessionName => {
+                    const button = document.createElement('button');
+                    button.innerText = sessionName;
+                    button.classList.add('session-btn');
+                    button.addEventListener('click', () => startQuiz(sessionName));
+                    sessionButtonsContainer.appendChild(button);
+                });
+            }
+
+            function startQuiz(sessionName) {
+                currentSession = sessionName;
+                currentQuestions = quizData[sessionName];
+                currentQuestionIndex = 0;
+                score = 0;
+                userAnswers = [];
+
+                menuScreen.classList.add('hidden');
+                resultScreen.classList.add('hidden');
+                quizScreen.classList.remove('hidden');
+
+                sessionTitle.innerText = sessionName;
+                displayQuestion();
+            }
+
+            function displayQuestion() {
+                const question = currentQuestions[currentQuestionIndex];
+                questionText.innerText = question.question;
+                answerOptionsContainer.innerHTML = '';
+
+                question.options.forEach((option, index) => {
+                    const optionChar = String.fromCharCode(65 + index); // A, B, C, ...
+                    const button = document.createElement('button');
+                    button.innerHTML = `<span style="font-weight:bold; margin-right: 8px;">${optionChar}.</span> ${option}`;
+                    button.classList.add('option-btn');
+                    button.dataset.answer = optionChar;
+                    button.addEventListener('click', () => checkAnswer(button, optionChar));
+                    answerOptionsContainer.appendChild(button);
+                });
+
+                progressText.innerText = `Soal ${currentQuestionIndex + 1} dari ${currentQuestions.length}`;
+            }
+
+            function checkAnswer(selectedButton, selectedAnswer) {
+                const allOptions = answerOptionsContainer.querySelectorAll('.option-btn');
+                allOptions.forEach(btn => {
+                    btn.disabled = true; // Nonaktifkan semua tombol setelah satu diklik
+                    btn.classList.add('answered');
+                });
+
+                const question = currentQuestions[currentQuestionIndex];
+                const isCorrect = selectedAnswer === question.answer;
+
+                userAnswers.push({
+                    question: question.question,
+                    selected: selectedAnswer,
+                    correct: question.answer,
+                    options: question.options,
+                    isCorrect: isCorrect
+                });
+
+                if (isCorrect) {
+                    score++;
+                    selectedButton.classList.add('correct');
+                } else {
+                    selectedButton.classList.add('incorrect');
+                    // Tampilkan juga jawaban yang benar
+                    const correctButton = answerOptionsContainer.querySelector(`[data-answer="${question.answer}"]`);
+                    if (correctButton) {
+                        correctButton.classList.add('correct');
+                    }
+                }
+
+                // Jeda sebelum lanjut ke soal berikutnya atau hasil
+                setTimeout(() => {
+                    currentQuestionIndex++;
+                    if (currentQuestionIndex < currentQuestions.length) {
+                        displayQuestion();
+                    } else {
+                        showResult();
+                    }
+                }, 1500); // Jeda 1.5 detik
+            }
+
+            function showResult() {
+                quizScreen.classList.add('hidden');
+                resultScreen.classList.remove('hidden');
+
+                resultSessionTitle.innerText = currentSession;
+                const percentage = Math.round((score / currentQuestions.length) * 100);
+                scoreText.innerText = `${percentage}%`;
+                scoreDetails.innerText = `Anda menjawab ${score} dari ${currentQuestions.length} soal dengan benar.`;
+
+                summaryContainer.innerHTML = '<h3>Ringkasan Jawaban:</h3>';
+                userAnswers.forEach((answer, index) => {
+                    const item = document.createElement('div');
+                    item.classList.add('summary-item');
+                    item.classList.add(answer.isCorrect ? 'correct' : 'incorrect');
+
+                    let selectedText = answer.options[answer.selected.charCodeAt(0) - 65];
+                    let correctText = answer.options[answer.correct.charCodeAt(0) - 65];
+
+                    let answerSummary = `<p><b>${index + 1}. ${answer.question}</b></p>`;
+                    if (answer.isCorrect) {
+                        answerSummary += `<p>Jawaban Anda: ${answer.selected}. ${selectedText} (Benar)</p>`;
+                    } else {
+                        answerSummary += `<p>Jawaban Anda: <span class="user-answer">${answer.selected}. ${selectedText}</span> (Salah)</p>`;
+                        answerSummary += `<p>Jawaban Benar: ${answer.correct}. ${correctText}</p>`;
+                    }
+
+                    item.innerHTML = answerSummary;
+                    summaryContainer.appendChild(item);
+                });
+            }
+
+            restartButton.addEventListener('click', () => {
+                resultScreen.classList.add('hidden');
+                menuScreen.classList.remove('hidden');
+            });
+
+            initMenu();
+        });
+    </script>
+</body>
+
+</html>
